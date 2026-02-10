@@ -1,6 +1,10 @@
 import streamlit as st
 import os
-os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+import sys
+
+# Set OpenCV environment variable only on Windows
+if sys.platform.startswith('win'):
+    os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
 
 import cv2
 import numpy as np
@@ -1012,398 +1016,399 @@ def render_analysis_page():
                 """, unsafe_allow_html=True)
             
             st.markdown("---")
-    
-    tabs = st.tabs([f"📄 {f.name}" for f in uploaded_files])
+        
+        # Create tabs for each uploaded file
+        tabs = st.tabs([f"📄 {f.name}" for f in uploaded_files])
 
-    for i, uploaded_file in enumerate(uploaded_files):
-        with tabs[i]:
-            image = Image.open(uploaded_file).convert("RGB")
-            img_np = np.array(image)
+        for i, uploaded_file in enumerate(uploaded_files):
+            with tabs[i]:
+                image = Image.open(uploaded_file).convert("RGB")
+                img_np = np.array(image)
 
-        # Prediction
-        with st.spinner("🔄 Analyzing scan with AI..."):
-            results = model.predict(img_np, conf=conf_threshold)
-            res = results[0]
+                # Prediction
+                with st.spinner("🔄 Analyzing scan with AI..."):
+                    results = model.predict(img_np, conf=conf_threshold)
+                    res = results[0]
 
-        col_viz, col_data = st.columns([2.2, 1], gap="large")
+                col_viz, col_data = st.columns([2.2, 1], gap="large")
 
-        # -------------------------------------------------
-        # VISUALIZATION COLUMN
-        # -------------------------------------------------
-        with col_viz:
-            st.markdown("### 📊 Visual Analysis")
+                # -------------------------------------------------
+                # VISUALIZATION COLUMN
+                # -------------------------------------------------
+                with col_viz:
+                    st.markdown("### 📊 Visual Analysis")
 
-            viz_tabs = st.tabs([
-                "🔍 Detection",
-                "🎨 Segmentation Map",
-                "🌡️ Grad-CAM"
-            ])
+                    viz_tabs = st.tabs([
+                        "🔍 Detection",
+                        "🎨 Segmentation Map",
+                        "🌡️ Grad-CAM"
+                    ])
 
-            # 1️⃣ DETECTION VIEW
-            with viz_tabs[0]:
-                st.markdown('<div class="image-container">', unsafe_allow_html=True)
-                st.image(
-                    res.plot(masks=False),
-                    use_container_width=True,
-                    caption="AI Object Detection - Tumor Localization"
-                )
-                st.markdown('</div>', unsafe_allow_html=True)
-                st.caption("🔹 Bounding boxes indicate detected tumor regions with confidence scores")
-
-            # 2️⃣ SEGMENTATION MAP (CLINICAL STYLE)
-            with viz_tabs[1]:
-                if res.masks:
-                    img_overlay = img_np.copy()
-
-                    for box, mask in zip(res.boxes, res.masks.xy):
-                        poly = np.array(mask, dtype=np.int32)
-                        area = int(cv2.contourArea(poly))
-
-                        # Risk-based color coding (BGR)
-                        if area < 5000:
-                            border_color = (34, 197, 94)      # Green
-                            fill_color = (34, 197, 94)
-                            risk_level = "Low Risk"
-                        elif area < 15000:
-                            border_color = (245, 158, 11)     # Amber
-                            fill_color = (245, 158, 11)
-                            risk_level = "Moderate Risk"
-                        else:
-                            border_color = (239, 68, 68)      # Red
-                            fill_color = (239, 68, 68)
-                            risk_level = "High Risk"
-
-                        # Semi-transparent fill overlay
-                        overlay = img_overlay.copy()
-                        cv2.fillPoly(overlay, [poly], fill_color)
-                        img_overlay = cv2.addWeighted(
-                            overlay, 0.18,
-                            img_overlay, 0.82,
-                            0
+                    # 1️⃣ DETECTION VIEW
+                    with viz_tabs[0]:
+                        st.markdown('<div class="image-container">', unsafe_allow_html=True)
+                        st.image(
+                            res.plot(masks=False),
+                            use_container_width=True,
+                            caption="AI Object Detection - Tumor Localization"
                         )
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        st.caption("🔹 Bounding boxes indicate detected tumor regions with confidence scores")
 
-                        # Precise boundary marking
-                        cv2.polylines(
-                            img_overlay,
-                            [poly],
-                            True,
-                            border_color,
-                            border_thickness
-                        )
+                    # 2️⃣ SEGMENTATION MAP (CLINICAL STYLE)
+                    with viz_tabs[1]:
+                        if res.masks:
+                            img_overlay = img_np.copy()
 
-                    st.markdown('<div class="image-container">', unsafe_allow_html=True)
-                    st.image(
-                        img_overlay,
-                        use_container_width=True,
-                        caption="Precise Tumor Segmentation with Risk-Based Color Coding"
-                    )
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    # Color coding legend
-                    legend_col1, legend_col2, legend_col3 = st.columns(3)
-                    with legend_col1:
-                        st.markdown("🟢 **Low Risk** - Area < 5,000 px²")
-                    with legend_col2:
-                        st.markdown("🟡 **Moderate** - Area 5,000-15,000 px²")
-                    with legend_col3:
-                        st.markdown("🔴 **High Risk** - Area > 15,000 px²")
-                else:
-                    st.info("✅ No tumor detected - Clean scan", icon="ℹ️")
+                            for box, mask in zip(res.boxes, res.masks.xy):
+                                poly = np.array(mask, dtype=np.int32)
+                                area = int(cv2.contourArea(poly))
 
-                # 3️⃣ GRAD-CAM HEATMAP
-                with viz_tabs[2]:
-                    if res.masks is not None:
-                        try:
-                            mask = (
-                                res.masks.data[0]
-                                .cpu()
-                                .numpy()
-                                .astype(np.float32)
-                            )
+                                # Risk-based color coding (BGR)
+                                if area < 5000:
+                                    border_color = (34, 197, 94)      # Green
+                                    fill_color = (34, 197, 94)
+                                    risk_level = "Low Risk"
+                                elif area < 15000:
+                                    border_color = (245, 158, 11)     # Amber
+                                    fill_color = (245, 158, 11)
+                                    risk_level = "Moderate Risk"
+                                else:
+                                    border_color = (239, 68, 68)      # Red
+                                    fill_color = (239, 68, 68)
+                                    risk_level = "High Risk"
 
-                            mask_resized = cv2.resize(
-                                mask,
-                                (img_np.shape[1], img_np.shape[0])
-                            )
+                                # Semi-transparent fill overlay
+                                overlay = img_overlay.copy()
+                                cv2.fillPoly(overlay, [poly], fill_color)
+                                img_overlay = cv2.addWeighted(
+                                    overlay, 0.18,
+                                    img_overlay, 0.82,
+                                    0
+                                )
 
-                            heatmap = np.uint8(255 * mask_resized)
-                            heatmap_color = cv2.applyColorMap(
-                                heatmap,
-                                cv2.COLORMAP_JET
-                            )
-
-                            grad_cam = cv2.addWeighted(
-                                img_np,
-                                0.6,
-                                heatmap_color,
-                                0.4,
-                                0
-                            )
+                                # Precise boundary marking
+                                cv2.polylines(
+                                    img_overlay,
+                                    [poly],
+                                    True,
+                                    border_color,
+                                    border_thickness
+                                )
 
                             st.markdown('<div class="image-container">', unsafe_allow_html=True)
                             st.image(
-                                grad_cam,
+                                img_overlay,
                                 use_container_width=True,
-                                caption="Grad-CAM Visualization - AI Attention Map"
+                                caption="Precise Tumor Segmentation with Risk-Based Color Coding"
                             )
                             st.markdown('</div>', unsafe_allow_html=True)
-                            st.caption("🔹 Warmer colors (red/yellow) indicate high model attention regions")
-                        except Exception as e:
-                            st.error(f"⚠️ Heatmap generation error: {e}", icon="🚨")
-                    else:
-                        st.info("✅ No tumor detected - Heatmap not applicable", icon="ℹ️")
-                
-                # Clinical Recommendations (under visualization)
-                if res.masks:
-                    st.markdown("---")
-                    st.markdown("### 🏥 Clinical Recommendations")
-                    # Get recommendations for the first/largest tumor
-                    first_mask = res.masks.xy[0]
-                    first_poly = np.array(first_mask, dtype=np.int32)
-                    first_area = int(cv2.contourArea(first_poly))
-                    first_label = model.names[int(res.boxes[0].cls[0])]
-                    
-                    if first_area < 5000:
-                        risk_cat = "Low Risk"
-                    elif first_area < 15000:
-                        risk_cat = "Moderate Risk"
-                    else:
-                        risk_cat = "High Risk"
-                    
-                    recommendations = get_clinical_recommendation(risk_cat, first_area, first_label)
-                    
-                    rec_html = "<ul style='margin: 0.5rem 0; padding-left: 1.5rem;'>"
-                    for rec in recommendations:
-                        rec_html += f"<li style='margin: 0.5rem 0; color: #475569;'>{rec}</li>"
-                    rec_html += "</ul>"
-                    
-                    st.markdown(f"""
-                    <div style='background: linear-gradient(135deg, #fef3c7 0%, #fca5a5 100%); 
-                                padding: 1.25rem; 
-                                border-radius: 12px; 
-                                border-left: 4px solid #f59e0b;'>
-                        <h4 style='margin: 0 0 0.75rem 0; color: #92400e; font-size: 1rem;'>
-                            ⚕️ Recommended Actions ({risk_cat})
-                        </h4>
-                        {rec_html}
-                        <p style='margin: 0.75rem 0 0 0; font-size: 0.85rem; color: #92400e; font-style: italic;'>
-                            ⚠️ These are automated suggestions. Always consult with qualified medical professionals.
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-            # -------------------------------------------------
-            # CLINICAL REPORT COLUMN
-            # -------------------------------------------------
-            with col_data:
-                st.markdown("### 📋 Clinical Report")
-
-                if res.masks:
-                    for j, (box, mask) in enumerate(
-                        zip(res.boxes, res.masks.xy)
-                    ):
-                        label = model.names[int(box.cls[0])]
-                        conf = float(box.conf[0])
-
-                        poly = np.array(mask, dtype=np.int32)
-                        area = int(cv2.contourArea(poly))
-
-                        # Determine staging and card style
-                        if area < 5000:
-                            stage = "Stage I"
-                            risk = "Low Risk"
-                            card_class = "success"
-                            badge_color = "#10b981"
-                        elif area < 15000:
-                            stage = "Stage II"
-                            risk = "Moderate Risk"
-                            card_class = "warning"
-                            badge_color = "#f59e0b"
+                            
+                            # Color coding legend
+                            legend_col1, legend_col2, legend_col3 = st.columns(3)
+                            with legend_col1:
+                                st.markdown("🟢 **Low Risk** - Area < 5,000 px²")
+                            with legend_col2:
+                                st.markdown("🟡 **Moderate** - Area 5,000-15,000 px²")
+                            with legend_col3:
+                                st.markdown("🔴 **High Risk** - Area > 15,000 px²")
                         else:
-                            stage = "Stage III"
-                            risk = "High Risk"
-                            card_class = "danger"
-                            badge_color = "#ef4444"
+                            st.info("✅ No tumor detected - Clean scan", icon="ℹ️")
 
-                        # Professional card layout
-                        st.markdown(f"""
-                        <div class="metric-card {card_class}">
-                            <div class="tumor-title">
-                                🧬 Finding {j+1}: {label.upper()}
-                            </div>
-                            <span class="stage-badge" style="background: {badge_color}; color: white;">
-                                {stage} - {risk}
-                            </span>
-                            <div style="margin-top: 1rem;">
-                                <div class="metric-item">
-                                    <span class="metric-label">Tumor Area</span>
-                                    <span class="metric-value">{area:,} px²</span>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-label">Confidence</span>
-                                    <span class="metric-value">{conf:.1%}</span>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-label">Classification</span>
-                                    <span class="metric-value">{label.title()}</span>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Confidence bar
-                        st.progress(conf, text=f"Detection Accuracy: {conf:.1%}")
-                        
-                        # Additional Metrics
-                        st.markdown("##### 📐 Additional Measurements")
-                        area_mm, volume_mm3 = calculate_tumor_volume(area)
-                        st.markdown(f"""
-                        <div style='background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;'>
-                            <div style='display: flex; justify-content: space-between; margin-bottom: 0.3rem;'>
-                                <span style='color: #64748b;'>Area (mm²):</span>
-                                <span style='font-weight: 600; color: #1e293b;'>{area_mm:.1f}</span>
-                            </div>
-                            <div style='display: flex; justify-content: space-between;'>
-                                <span style='color: #64748b;'>Est. Volume (mm³):</span>
-                                <span style='font-weight: 600; color: #1e293b;'>{volume_mm3:.1f}</span>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
+                    # 3️⃣ GRAD-CAM HEATMAP
+                    with viz_tabs[2]:
+                        if res.masks is not None:
+                            try:
+                                mask = (
+                                    res.masks.data[0]
+                                    .cpu()
+                                    .numpy()
+                                    .astype(np.float32)
+                                )
+
+                                mask_resized = cv2.resize(
+                                    mask,
+                                    (img_np.shape[1], img_np.shape[0])
+                                )
+
+                                heatmap = np.uint8(255 * mask_resized)
+                                heatmap_color = cv2.applyColorMap(
+                                    heatmap,
+                                    cv2.COLORMAP_JET
+                                )
+
+                                grad_cam = cv2.addWeighted(
+                                    img_np,
+                                    0.6,
+                                    heatmap_color,
+                                    0.4,
+                                    0
+                                )
+
+                                st.markdown('<div class="image-container">', unsafe_allow_html=True)
+                                st.image(
+                                    grad_cam,
+                                    use_container_width=True,
+                                    caption="Grad-CAM Visualization - AI Attention Map"
+                                )
+                                st.markdown('</div>', unsafe_allow_html=True)
+                                st.caption("🔹 Warmer colors (red/yellow) indicate high model attention regions")
+                            except Exception as e:
+                                st.error(f"⚠️ Heatmap generation error: {e}", icon="🚨")
+                        else:
+                            st.info("✅ No tumor detected - Heatmap not applicable", icon="ℹ️")
+                
+                    # Clinical Recommendations (under visualization)
+                    if res.masks:
                         st.markdown("---")
-                else:
-                    st.markdown("""
-                    <div class="clean-scan">
-                        ✅ No Abnormalities Detected<br>
-                        <small style="font-size: 0.9rem; opacity: 0.8;">Scan appears normal</small>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            # Download Section (outside the columns, full width)
+                        st.markdown("### 🏥 Clinical Recommendations")
+                        # Get recommendations for the first/largest tumor
+                        first_mask = res.masks.xy[0]
+                        first_poly = np.array(first_mask, dtype=np.int32)
+                        first_area = int(cv2.contourArea(first_poly))
+                        first_label = model.names[int(res.boxes[0].cls[0])]
+                        
+                        if first_area < 5000:
+                            risk_cat = "Low Risk"
+                        elif first_area < 15000:
+                            risk_cat = "Moderate Risk"
+                        else:
+                            risk_cat = "High Risk"
+                        
+                        recommendations = get_clinical_recommendation(risk_cat, first_area, first_label)
+                        
+                        rec_html = "<ul style='margin: 0.5rem 0; padding-left: 1.5rem;'>"
+                        for rec in recommendations:
+                            rec_html += f"<li style='margin: 0.5rem 0; color: #475569;'>{rec}</li>"
+                        rec_html += "</ul>"
+                        
+                        st.markdown(f"""
+                        <div style='background: linear-gradient(135deg, #fef3c7 0%, #fca5a5 100%); 
+                                    padding: 1.25rem; 
+                                    border-radius: 12px; 
+                                    border-left: 4px solid #f59e0b;'>
+                            <h4 style='margin: 0 0 0.75rem 0; color: #92400e; font-size: 1rem;'>
+                                ⚕️ Recommended Actions ({risk_cat})
+                            </h4>
+                            {rec_html}
+                            <p style='margin: 0.75rem 0 0 0; font-size: 0.85rem; color: #92400e; font-style: italic;'>
+                                ⚠️ These are automated suggestions. Always consult with qualified medical professionals.
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # -------------------------------------------------
+                # CLINICAL REPORT COLUMN
+                # -------------------------------------------------
+                with col_data:
+                    st.markdown("### 📋 Clinical Report")
+
+                    if res.masks:
+                        for j, (box, mask) in enumerate(
+                            zip(res.boxes, res.masks.xy)
+                        ):
+                            label = model.names[int(box.cls[0])]
+                            conf = float(box.conf[0])
+
+                            poly = np.array(mask, dtype=np.int32)
+                            area = int(cv2.contourArea(poly))
+
+                            # Determine staging and card style
+                            if area < 5000:
+                                stage = "Stage I"
+                                risk = "Low Risk"
+                                card_class = "success"
+                                badge_color = "#10b981"
+                            elif area < 15000:
+                                stage = "Stage II"
+                                risk = "Moderate Risk"
+                                card_class = "warning"
+                                badge_color = "#f59e0b"
+                            else:
+                                stage = "Stage III"
+                                risk = "High Risk"
+                                card_class = "danger"
+                                badge_color = "#ef4444"
+
+                            # Professional card layout
+                            st.markdown(f"""
+                            <div class="metric-card {card_class}">
+                                <div class="tumor-title">
+                                    🧬 Finding {j+1}: {label.upper()}
+                                </div>
+                                <span class="stage-badge" style="background: {badge_color}; color: white;">
+                                    {stage} - {risk}
+                                </span>
+                                <div style="margin-top: 1rem;">
+                                    <div class="metric-item">
+                                        <span class="metric-label">Tumor Area</span>
+                                        <span class="metric-value">{area:,} px²</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Confidence</span>
+                                        <span class="metric-value">{conf:.1%}</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Classification</span>
+                                        <span class="metric-value">{label.title()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Confidence bar
+                            st.progress(conf, text=f"Detection Accuracy: {conf:.1%}")
+                            
+                            # Additional Metrics
+                            st.markdown("##### 📐 Additional Measurements")
+                            area_mm, volume_mm3 = calculate_tumor_volume(area)
+                            st.markdown(f"""
+                            <div style='background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;'>
+                                <div style='display: flex; justify-content: space-between; margin-bottom: 0.3rem;'>
+                                    <span style='color: #64748b;'>Area (mm²):</span>
+                                    <span style='font-weight: 600; color: #1e293b;'>{area_mm:.1f}</span>
+                                </div>
+                                <div style='display: flex; justify-content: space-between;'>
+                                    <span style='color: #64748b;'>Est. Volume (mm³):</span>
+                                    <span style='font-weight: 600; color: #1e293b;'>{volume_mm3:.1f}</span>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            st.markdown("---")
+                    else:
+                        st.markdown("""
+                        <div class="clean-scan">
+                            ✅ No Abnormalities Detected<br>
+                            <small style="font-size: 0.9rem; opacity: 0.8;">Scan appears normal</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Download Section (outside the columns, full width)
+                st.markdown("---")
+                st.markdown("### 💾 Export Results")
+                
+                download_col1, download_col2, download_col3 = st.columns(3)
+                
+                with download_col1:
+                    # Download Detection Image
+                    detection_img = res.plot(masks=False)
+                    st.markdown(get_image_download_link(detection_img, f"detection_{uploaded_file.name}"), unsafe_allow_html=True)
+                    st.caption("Download detection view")
+                
+                with download_col2:
+                    # Download Segmentation if available
+                    if res.masks:
+                        # Recreate segmentation image for download
+                        seg_img = img_np.copy()
+                        for box, mask in zip(res.boxes, res.masks.xy):
+                            poly = np.array(mask, dtype=np.int32)
+                            area = int(cv2.contourArea(poly))
+                            if area < 5000:
+                                color = (34, 197, 94)
+                            elif area < 15000:
+                                color = (245, 158, 11)
+                            else:
+                                color = (239, 68, 68)
+                            overlay = seg_img.copy()
+                            cv2.fillPoly(overlay, [poly], color)
+                            seg_img = cv2.addWeighted(overlay, 0.18, seg_img, 0.82, 0)
+                            cv2.polylines(seg_img, [poly], True, color, border_thickness)
+                        
+                        st.markdown(get_image_download_link(seg_img, f"segmentation_{uploaded_file.name}"), unsafe_allow_html=True)
+                        st.caption("Download segmentation map")
+                    else:
+                        st.info("No segmentation available")
+                
+                with download_col3:
+                    # Download original image
+                    st.markdown(get_image_download_link(img_np, f"original_{uploaded_file.name}"), unsafe_allow_html=True)
+                    st.caption("Download original scan")
+        
+        # Comparison Table for Multiple Scans
+        if len(uploaded_files) > 1:
             st.markdown("---")
-            st.markdown("### 💾 Export Results")
+            st.markdown('<p class="section-header">📊 Comparative Analysis</p>', unsafe_allow_html=True)
             
-            download_col1, download_col2, download_col3 = st.columns(3)
-            
-            with download_col1:
-                # Download Detection Image
-                detection_img = res.plot(masks=False)
-                st.markdown(get_image_download_link(detection_img, f"detection_{uploaded_file.name}"), unsafe_allow_html=True)
-                st.caption("Download detection view")
-            
-            with download_col2:
-                # Download Segmentation if available
-                if res.masks:
-                    # Recreate segmentation image for download
-                    seg_img = img_np.copy()
-                    for box, mask in zip(res.boxes, res.masks.xy):
+            # Build comparison data
+            comparison_data = []
+            for idx, uploaded_file in enumerate(uploaded_files):
+                img = Image.open(uploaded_file).convert("RGB")
+                img_array = np.array(img)
+                result = model.predict(img_array, conf=conf_threshold, verbose=False)[0]
+                
+                if result.masks:
+                    num_tumors = len(result.masks)
+                    max_area = 0
+                    tumor_types = []
+                    avg_confidence = 0
+                    
+                    for box, mask in zip(result.boxes, result.masks.xy):
                         poly = np.array(mask, dtype=np.int32)
                         area = int(cv2.contourArea(poly))
-                        if area < 5000:
-                            color = (34, 197, 94)
-                        elif area < 15000:
-                            color = (245, 158, 11)
-                        else:
-                            color = (239, 68, 68)
-                        overlay = seg_img.copy()
-                        cv2.fillPoly(overlay, [poly], color)
-                        seg_img = cv2.addWeighted(overlay, 0.18, seg_img, 0.82, 0)
-                        cv2.polylines(seg_img, [poly], True, color, border_thickness)
+                        max_area = max(max_area, area)
+                        tumor_types.append(model.names[int(box.cls[0])])
+                        avg_confidence += float(box.conf[0])
                     
-                    st.markdown(get_image_download_link(seg_img, f"segmentation_{uploaded_file.name}"), unsafe_allow_html=True)
-                    st.caption("Download segmentation map")
+                    avg_confidence = avg_confidence / num_tumors if num_tumors > 0 else 0
+                    
+                    if max_area < 5000:
+                        risk = "🟢 Low"
+                    elif max_area < 15000:
+                        risk = "🟡 Moderate"
+                    else:
+                        risk = "🔴 High"
+                    
+                    status = "⚠️ Positive"
                 else:
-                    st.info("No segmentation available")
+                    num_tumors = 0
+                    max_area = 0
+                    tumor_types = ["-"]
+                    avg_confidence = 0
+                    risk = "✅ None"
+                    status = "✅ Negative"
+                
+                comparison_data.append({
+                    "Scan": uploaded_file.name,
+                    "Status": status,
+                    "Tumors Found": num_tumors,
+                    "Max Area (px²)": f"{max_area:,}" if max_area > 0 else "-",
+                    "Risk Level": risk,
+                    "Types": ", ".join(set(tumor_types)),
+                    "Avg. Confidence": f"{avg_confidence:.1%}" if avg_confidence > 0 else "-"
+                })
             
-            with download_col3:
-                # Download original image
-                st.markdown(get_image_download_link(img_np, f"original_{uploaded_file.name}"), unsafe_allow_html=True)
-                st.caption("Download original scan")
-    
-    # Comparison Table for Multiple Scans
-    if len(uploaded_files) > 1:
-        st.markdown("---")
-        st.markdown('<p class="section-header">📊 Comparative Analysis</p>', unsafe_allow_html=True)
-        
-        # Build comparison data
-        comparison_data = []
-        for idx, uploaded_file in enumerate(uploaded_files):
-            img = Image.open(uploaded_file).convert("RGB")
-            img_array = np.array(img)
-            result = model.predict(img_array, conf=conf_threshold, verbose=False)[0]
+            # Create DataFrame and display
+            df = pd.DataFrame(comparison_data)
             
-            if result.masks:
-                num_tumors = len(result.masks)
-                max_area = 0
-                tumor_types = []
-                avg_confidence = 0
-                
-                for box, mask in zip(result.boxes, result.masks.xy):
-                    poly = np.array(mask, dtype=np.int32)
-                    area = int(cv2.contourArea(poly))
-                    max_area = max(max_area, area)
-                    tumor_types.append(model.names[int(box.cls[0])])
-                    avg_confidence += float(box.conf[0])
-                
-                avg_confidence = avg_confidence / num_tumors if num_tumors > 0 else 0
-                
-                if max_area < 5000:
-                    risk = "🟢 Low"
-                elif max_area < 15000:
-                    risk = "🟡 Moderate"
+            # Custom styled table
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Scan": st.column_config.TextColumn("Scan File", width="medium"),
+                    "Status": st.column_config.TextColumn("Status", width="small"),
+                    "Tumors Found": st.column_config.NumberColumn("Tumors", width="small"),
+                    "Max Area (px²)": st.column_config.TextColumn("Max Area", width="small"),
+                    "Risk Level": st.column_config.TextColumn("Risk", width="small"),
+                    "Types": st.column_config.TextColumn("Type(s)", width="medium"),
+                    "Avg. Confidence": st.column_config.TextColumn("Confidence", width="small"),
+                }
+            )
+            
+            # Summary insights
+            positive_count = sum(1 for d in comparison_data if "Positive" in d["Status"])
+            high_risk_count = sum(1 for d in comparison_data if "🔴" in d["Risk Level"])
+            
+            insights_col1, insights_col2 = st.columns(2)
+            with insights_col1:
+                st.info(f"📌 **Key Finding:** {positive_count} out of {len(uploaded_files)} scans show abnormalities", icon="ℹ️")
+            with insights_col2:
+                if high_risk_count > 0:
+                    st.warning(f"⚠️ **Alert:** {high_risk_count} high-risk case(s) detected - Immediate review recommended", icon="🚨")
                 else:
-                    risk = "🔴 High"
-                
-                status = "⚠️ Positive"
-            else:
-                num_tumors = 0
-                max_area = 0
-                tumor_types = ["-"]
-                avg_confidence = 0
-                risk = "✅ None"
-                status = "✅ Negative"
-            
-            comparison_data.append({
-                "Scan": uploaded_file.name,
-                "Status": status,
-                "Tumors Found": num_tumors,
-                "Max Area (px²)": f"{max_area:,}" if max_area > 0 else "-",
-                "Risk Level": risk,
-                "Types": ", ".join(set(tumor_types)),
-                "Avg. Confidence": f"{avg_confidence:.1%}" if avg_confidence > 0 else "-"
-            })
-        
-        # Create DataFrame and display
-        df = pd.DataFrame(comparison_data)
-        
-        # Custom styled table
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Scan": st.column_config.TextColumn("Scan File", width="medium"),
-                "Status": st.column_config.TextColumn("Status", width="small"),
-                "Tumors Found": st.column_config.NumberColumn("Tumors", width="small"),
-                "Max Area (px²)": st.column_config.TextColumn("Max Area", width="small"),
-                "Risk Level": st.column_config.TextColumn("Risk", width="small"),
-                "Types": st.column_config.TextColumn("Type(s)", width="medium"),
-                "Avg. Confidence": st.column_config.TextColumn("Confidence", width="small"),
-            }
-        )
-        
-        # Summary insights
-        positive_count = sum(1 for d in comparison_data if "Positive" in d["Status"])
-        high_risk_count = sum(1 for d in comparison_data if "🔴" in d["Risk Level"])
-        
-        insights_col1, insights_col2 = st.columns(2)
-        with insights_col1:
-            st.info(f"📌 **Key Finding:** {positive_count} out of {len(uploaded_files)} scans show abnormalities", icon="ℹ️")
-        with insights_col2:
-            if high_risk_count > 0:
-                st.warning(f"⚠️ **Alert:** {high_risk_count} high-risk case(s) detected - Immediate review recommended", icon="🚨")
-            else:
-                st.success("✅ No high-risk cases detected in this batch", icon="✨")
+                    st.success("✅ No high-risk cases detected in this batch", icon="✨")
 
     # -------------------------------------------------
     # FOOTER
