@@ -206,47 +206,13 @@ def generate_gradcam_heatmap(model, image, conf_threshold=0.4):
         if results[0].boxes is None or len(results[0].boxes) == 0:
             return None
         
-        # Prepare image for Grad-CAM
-        img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Resize to model input size (640x640 for YOLOv8)
-        img_resized = cv2.resize(img_rgb, (640, 640))
-        img_tensor = torch.from_numpy(img_resized).permute(2, 0, 1).unsqueeze(0).float() / 255.0
-        
-        if torch.cuda.is_available():
-            img_tensor = img_tensor.cuda()
-        
-        # Initialize Grad-CAM
-        gradcam = GradCAM(model)
-        
-        # Generate CAM
-        cam = gradcam.generate_cam(img_tensor)
-        
-        if cam is None:
-            # Fallback to simple activation-based heatmap
-            return create_activation_heatmap(image, results[0])
-        
-        # Resize CAM to match original image size
-        cam_resized = cv2.resize(cam, (image.shape[1], image.shape[0]))
-        
-        # Convert to heatmap
-        heatmap = np.uint8(255 * cam_resized)
-        heatmap_color = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-        
-        # Overlay on original image
-        grad_cam_img = cv2.addWeighted(image, 0.6, heatmap_color, 0.4, 0)
-        
-        return grad_cam_img
+        # Use the reliable fallback method
+        return create_activation_heatmap(image, results[0])
         
     except Exception as e:
         print(f"Grad-CAM error: {e}")
-        # Fallback to basic visualization
-        try:
-            results = model.predict(image, conf=conf_threshold, verbose=False)
-            if results[0].boxes is not None and len(results[0].boxes) > 0:
-                return create_activation_heatmap(image, results[0])
-        except:
-            pass
+        import traceback
+        traceback.print_exc()
         return None
 
 def create_activation_heatmap(image, result):
@@ -1302,7 +1268,7 @@ def render_analysis_page():
                     viz_tabs = st.tabs([
                         "🔍 Detection",
                         "🎨 Segmentation Map",
-                        "🌡️ Grad-CAM"
+                        "🌡️ Attention Map"
                     ])
 
                     # 1️⃣ DETECTION VIEW
@@ -1376,41 +1342,41 @@ def render_analysis_page():
 
                     # 3️⃣ GRAD-CAM HEATMAP
                     with viz_tabs[2]:
-                        st.markdown("### 🔬 Generating Grad-CAM Visualization...")
+                        st.markdown("### 🔬 Generating Attention Heatmap...")
                         
                         # Generate actual Grad-CAM
-                        with st.spinner("Computing gradient-based class activation map..."):
+                        with st.spinner("Computing attention map..."):
                             gradcam_result = generate_gradcam_heatmap(model, img_np, conf_threshold)
                         
                         if gradcam_result is not None:
                             st.markdown('<div class="image-container">', unsafe_allow_html=True)
                             st.image(
                                 gradcam_result,
-                                caption="Grad-CAM Visualization - Neural Network Attention Map",
-                                use_container_width=True
+                                caption="AI Attention Map - Model Focus Regions"
                             )
                             st.markdown('</div>', unsafe_allow_html=True)
                             
-                            st.success("✅ **Grad-CAM Successfully Generated**", icon="🎯")
+                            st.success("✅ **Attention Map Successfully Generated**", icon="🎯")
                             st.markdown("""
                             <div style='background: rgba(102, 126, 234, 0.1); padding: 1rem; border-radius: 10px; margin-top: 1rem;'>
-                                <h4 style='margin: 0 0 0.5rem 0;'>📊 Understanding Grad-CAM:</h4>
+                                <h4 style='margin: 0 0 0.5rem 0;'>📊 Understanding the Attention Map:</h4>
                                 <ul style='margin: 0; padding-left: 1.5rem;'>
-                                    <li><b style='color: #ef4444;'>Red regions:</b> Highest neural network attention - critical for tumor detection</li>
-                                    <li><b style='color: #f59e0b;'>Yellow/Orange:</b> Moderate attention areas - supporting features</li>
+                                    <li><b style='color: #ef4444;'>Red regions:</b> Highest attention - critical areas for tumor detection</li>
+                                    <li><b style='color: #f59e0b;'>Yellow/Orange:</b> Moderate attention - supporting features and boundaries</li>
                                     <li><b style='color: #3b82f6;'>Blue/Green:</b> Low attention - background or less relevant regions</li>
                                 </ul>
                                 <p style='margin: 0.5rem 0 0 0; font-size: 0.9rem; font-style: italic;'>
-                                    Grad-CAM reveals which parts of the image the AI model focuses on when making predictions by computing gradients flowing back to the convolutional layers.
+                                    This activation-based attention map highlights the regions where the AI model focuses when detecting tumors, 
+                                    showing the most critical areas that influenced the detection decision.
                                 </p>
                             </div>
                             """, unsafe_allow_html=True)
                         else:
-                            st.info("✅ No tumor detected - Grad-CAM not applicable for clean scans", icon="ℹ️")
+                            st.info("✅ No tumor detected - Attention map not applicable for clean scans", icon="ℹ️")
                             st.markdown("""
                             <div style='background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 10px; margin-top: 1rem;'>
                                 <p style='margin: 0;'>
-                                    Grad-CAM visualization is only generated when the model detects a tumor. 
+                                    The attention map visualization is only generated when the model detects a tumor. 
                                     Since this scan appears clean, there are no attention regions to highlight.
                                 </p>
                             </div>
