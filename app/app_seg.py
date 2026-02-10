@@ -1,16 +1,22 @@
 import streamlit as st
 import os
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+
 import cv2
 import numpy as np
+
 from PIL import Image
 from ultralytics import YOLO
-from datetime import datetime
+
 import pandas as pd
 import base64
 from io import BytesIO
+from datetime import datetime
+
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+
 
 # -------------------------------------------------
 # 1. SETUP PATHS
