@@ -12,7 +12,7 @@ def train():
 
     model.train(
         data=DATA_YAML,
-        epochs=50,
+        epochs=100,
         imgsz=640,
         batch=16,
         device=0, # Your RTX 4050

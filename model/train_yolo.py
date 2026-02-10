@@ -1,45 +1,3 @@
-'''from ultralytics import YOLO
-import os
-import sys
-
-# --- DYNAMIC PATH SETUP ---
-# Ensures the script finds data.yaml no matter where it's run from
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
-DATA_YAML_PATH = os.path.join(PROJECT_ROOT, "data", "data.yaml")
-
-def train_model():
-    print(f" Starting Training for NeuroScan AI...")
-    print(f" Project Root: {PROJECT_ROOT}")
-    print(f" Using config: {DATA_YAML_PATH}")
-
-    # 1. Load the YOLOv8 Nano model (pretrained on COCO)
-    # We use 'n' (nano) because it is the fastest for training on CPUs
-    model = YOLO('yolov8n.pt') 
-
-    # 2. Run Training
-    # We increase epochs to 50 so it has time to learn the small tumor boxes
-    model.train(
-        data=DATA_YAML_PATH,   # Path to your data.yaml
-        epochs=30,              # Enough time to learn features
-        imgsz=640,              # Standard YOLO resolution
-        batch=-1,               # Adjust based on your RAM (8 or 16 is fine)
-        device=0,           # Use '0' if you have an NVIDIA GPU
-        project=os.path.join(PROJECT_ROOT, 'results'), # Save to results folder
-        name='brain_tumor_run', # Name of the folder
-        exist_ok=True,          # Overwrites if the folder already exists
-        save=True,               # Save the weights
-        plots=True              # Save loss curves so you can check progress
-    )
-
-    print("\n✅ TRAINING COMPLETE!")
-    print(f" Best model saved at: {PROJECT_ROOT}/results/brain_tumor_run/weights/best.pt")
-
-if __name__ == "__main__":
-    train_model()
-'''
-
-
 import os
 import torch
 from ultralytics import YOLO
@@ -68,7 +26,7 @@ def train_neuroscan():
     # 3. Start the Training
     model.train(
         data=DATA_YAML_PATH,    # Path to your class names and image locations
-        epochs=50,               # 50 is the gold standard for high accuracy
+        epochs=100,               # 50 is the gold standard for high accuracy
         imgsz=640,               # Native resolution for YOLOv8
         batch=-1,                # 16 images per batch (Safe for 6GB VRAM)
         device=device,           # Uses your dedicated GPU

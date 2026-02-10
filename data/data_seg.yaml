@@ -1,5 +1,5 @@
 # The 'path' should be the ROOT of the dataset images
-path: C:/Users/AbhinavKumar/Desktop/Project/NeuroScanVision/data/yolo_segmentation 
+path: E:/Major_Project/data/yolo_segmentation 
 
 # These are folders INSIDE the path above
 train: images/train

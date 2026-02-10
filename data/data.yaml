@@ -1,4 +1,5 @@
-path:  C:\Users\AbhinavKumar\Desktop\Project\NeuroScanVision\data\yolo_dataset
+path: E:/Major_Project/data/yolo_dataset
+
 
 train: images/train
 val: images/val
