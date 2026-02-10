@@ -597,7 +597,7 @@ def render_metrics_page():
             fig_loss.update_yaxes(title_text="Loss", row=1, col=1)
             fig_loss.update_yaxes(title_text="Loss", row=1, col=2)
             
-            st.plotly_chart(fig_loss, use_container_width=True)
+            st.plotly_chart(fig_loss)
         
         with chart_tab2:
             # Metrics evolution
@@ -644,7 +644,7 @@ def render_metrics_page():
                 template='plotly_white'
             )
             
-            st.plotly_chart(fig_metrics, use_container_width=True)
+            st.plotly_chart(fig_metrics)
         
         with chart_tab3:
             # Detailed metrics table
@@ -664,7 +664,6 @@ def render_metrics_page():
                 
                 st.dataframe(
                     display_df,
-                    use_container_width=True,
                     height=400
                 )
             else:
@@ -1049,7 +1048,6 @@ def render_analysis_page():
                         st.markdown('<div class="image-container">', unsafe_allow_html=True)
                         st.image(
                             res.plot(masks=False),
-                            use_container_width=True,
                             caption="AI Object Detection - Tumor Localization"
                         )
                         st.markdown('</div>', unsafe_allow_html=True)
@@ -1099,7 +1097,6 @@ def render_analysis_page():
                             st.markdown('<div class="image-container">', unsafe_allow_html=True)
                             st.image(
                                 img_overlay,
-                                use_container_width=True,
                                 caption="Precise Tumor Segmentation with Risk-Based Color Coding"
                             )
                             st.markdown('</div>', unsafe_allow_html=True)
@@ -1148,7 +1145,6 @@ def render_analysis_page():
                                 st.markdown('<div class="image-container">', unsafe_allow_html=True)
                                 st.image(
                                     grad_cam,
-                                    use_container_width=True,
                                     caption="Grad-CAM Visualization - AI Attention Map"
                                 )
                                 st.markdown('</div>', unsafe_allow_html=True)
@@ -1384,7 +1380,6 @@ def render_analysis_page():
             # Custom styled table
             st.dataframe(
                 df,
-                use_container_width=True,
                 hide_index=True,
                 column_config={
                     "Scan": st.column_config.TextColumn("Scan File", width="medium"),
