@@ -404,6 +404,7 @@ st.markdown("""
     
     [data-testid="stSidebar"] .stMarkdown {
         color: #e2e8f0;
+        margin: 0.25rem 0;
     }
     
     [data-testid="stSidebar"] .stMarkdown h1,
@@ -416,6 +417,21 @@ st.markdown("""
     [data-testid="stSidebar"] .stMarkdown li,
     [data-testid="stSidebar"] .stMarkdown span {
         color: white !important;
+    }
+
+    [data-testid="stSidebar"] .stMarkdown h3,
+    [data-testid="stSidebar"] .stMarkdown h4 {
+        margin: 0.4rem 0 0.35rem;
+        line-height: 1.2;
+    }
+
+    [data-testid="stSidebar"] hr {
+        margin: 0.5rem 0;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    [data-testid="stSidebar"] .stVerticalBlock {
+        gap: 0.5rem;
     }
     
     [data-testid="stSidebar"] [data-testid="stExpander"] {
@@ -446,6 +462,29 @@ st.markdown("""
     
     [data-testid="stSidebar"] .stRadio [role="radiogroup"] label {
         color: white !important;
+    }
+
+    [data-testid="stSidebar"] .stButton > button {
+        background: linear-gradient(180deg, #1f2a44 0%, #1a2338 100%);
+        color: #e5e7eb !important;
+        border: 1px solid #2b3a5a;
+        border-radius: 8px;
+        padding: 0.35rem 0.6rem;
+        font-weight: 600;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 10px rgba(0, 0, 0, 0.25);
+    }
+
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: linear-gradient(180deg, #253454 0%, #1c2740 100%);
+        border-color: #3b4d74;
+    }
+
+    [data-testid="stSidebar"] .stButton > button:active,
+    [data-testid="stSidebar"] .stButton > button:focus {
+        background: linear-gradient(180deg, #19233a 0%, #151c2f 100%);
+        border-color: #4b5f8c;
+        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+        outline: none;
     }
     
     [data-testid="stSidebar"] .stInfo {
@@ -1061,20 +1100,99 @@ def render_analysis_page():
 
         st.markdown("---")
 
-        # Model Information
+        # Model Information with Interactive Buttons
         if is_active:
+            # Initialize session state for tumor descriptions
+            if 'selected_tumor' not in st.session_state:
+                st.session_state.selected_tumor = None
+            
+            # Tumor descriptions
+            tumor_descriptions = {
+                "GLIOMA": """
+                    **🧠 GLIOMA - Malignant Glial Cell Tumor**
+                    
+                    Gliomas are tumors that arise from glial cells in the brain. They are among the most common primary brain tumors and can be quite aggressive.
+                    
+                    **Key Characteristics:**
+                    - Origin: Glial cells (supportive cells in the brain)
+                    - Aggressiveness: Often malignant and fast-growing
+                    - Types: Astrocytoma, Oligodendroglioma, Ependymoma
+                    - Grade: Can range from low to high grade
+                    
+                    **Clinical Significance:**
+                    - Symptoms: Headaches, seizures, vision problems
+                    - Treatment: Surgery, radiation, chemotherapy
+                    - Prognosis: Varies based on grade and location
+                    - Urgency: Requires immediate specialist consultation
+                """,
+                "MENINGIOMA": """
+                    **🛡️ MENINGIOMA - Protective Membrane Tumor**
+                    
+                    Meningiomas are tumors that arise from the meninges, the protective membranes surrounding the brain and spinal cord.
+                    
+                    **Key Characteristics:**
+                    - Origin: Meningeal cells (brain protective layers)
+                    - Grade: Usually benign, but can be malignant
+                    - Location: Often accessible for surgical removal
+                    - Growth Rate: Generally slower than other brain tumors
+                    
+                    **Clinical Significance:**
+                    - Symptoms: Headaches, vision changes, seizures
+                    - Treatment: Surgery is primary treatment when needed
+                    - Monitoring: Regular imaging for stable/slow-growing tumors
+                    - Prognosis: Generally better than gliomas when benign
+                """,
+                "PITUITARY": """
+                    **🎯 PITUITARY - Hormone-Secreting Tumor**
+                    
+                    Pituitary tumors arise from the pituitary gland, which controls hormone production in the body.
+                    
+                    **Key Characteristics:**
+                    - Origin: Anterior or posterior pituitary gland
+                    - Function: Often causes hormonal imbalances
+                    - Type: Usually adenoma (benign growth)
+                    - Size: Can be microadenoma or macroadenoma
+                    
+                    **Clinical Significance:**
+                    - Symptoms: Hormonal imbalance, vision problems, headaches
+                    - Diagnosis: Endocrine Blood tests + MRI imaging
+                    - Treatment: Medication, surgery, or radiation
+                    - Prognosis: Often excellent with proper management
+                """,
+                "NO_TUMOR": """
+                    **✨ EXCELLENT NEWS! NO TUMOR DETECTED ✨**
+                    
+                    🎉 Congratulations! The AI analysis did not detect any tumors in the scanned region.
+                    
+                    **What This Means:**
+                    - ✅ No abnormal growth detected
+                    - ✅ Normal brain tissue appearance
+                    - ✅ No immediate concern for tumor pathology
+                    
+                    **Recommendations:**
+                    - Continue regular health check-ups as recommended by your physician
+                    - Maintain a healthy lifestyle for brain health
+                    - Report any new symptoms to your healthcare provider
+                    - Follow your doctor's advice for future imaging if needed
+                    
+                    **Remember:**
+                    - Always consult with medical professionals for complete evaluation
+                    - AI results are supplementary to professional medical diagnosis
+                    - This result applies only to this specific scan analysis
+                """
+            }
+            
+            # Create buttons for each tumor class
             st.markdown("<h4 style='color: white;'>🧬 Tumor Classes</h4>", unsafe_allow_html=True)
+            
             for i, name in model.names.items():
-                st.markdown(f"""
-                <div style='background: rgba(102, 126, 234, 0.1); 
-                            padding: 0.5rem; 
-                            border-radius: 8px; 
-                            margin: 0.3rem 0;
-                            border-left: 3px solid #667eea;
-                            color: white;'>
-                    <b>Class {i}:</b> {name.upper()}
-                </div>
-                """, unsafe_allow_html=True)
+                if st.button(f"Class {i}: {name.upper()}", use_container_width=True, key=f"tumor_btn_{i}"):
+                    st.session_state.selected_tumor = name.upper()
+            
+            # Display description based on selected tumor
+            if st.session_state.selected_tumor:
+                st.markdown("---")
+                st.markdown(tumor_descriptions.get(st.session_state.selected_tumor, "Information not available"))
 
         st.markdown("---")
         
